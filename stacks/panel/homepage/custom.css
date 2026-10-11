@@ -1,0 +1,84 @@
+/* Panel de servidor: el frontal del rack.
+   Raíles con agujeros de montaje, placas con tornillos y LED, y etiquetas de rotuladora para los grupos. */
+@font-face { font-family: Saira; font-weight: 400; src: url(https://servidor.tailnet-ejemplo.ts.net:3009/fonts/saira-semi-condensed-400.woff2) format("woff2") }
+@font-face { font-family: Saira; font-weight: 500; src: url(https://servidor.tailnet-ejemplo.ts.net:3009/fonts/saira-semi-condensed-500.woff2) format("woff2") }
+@font-face { font-family: Saira; font-weight: 600; src: url(https://servidor.tailnet-ejemplo.ts.net:3009/fonts/saira-semi-condensed-600.woff2) format("woff2") }
+@font-face { font-family: Saira; font-weight: 700; src: url(https://servidor.tailnet-ejemplo.ts.net:3009/fonts/saira-semi-condensed-700.woff2) format("woff2") }
+
+:root {
+  --void: #0e0f11;       /* fondo del armario */
+  --rail: #2b2e33;       /* raíl de aluminio */
+  --plate: #1f2226;      /* placa frontal */
+  --plate-hi: #2a2e34;   /* bisel iluminado */
+  --text: #dfe3e8; --text-2: #8d95a1;
+  --led: #3ce07f; --led-off: #ff5a4f;
+  --tape: #f1f0ea; --tape-ink: #15161a;
+}
+
+html, body, #__next { background: var(--void) !important }
+body { font-family: Saira, "Arial Narrow", system-ui, sans-serif !important; color: var(--text); letter-spacing: .01em }
+#page_wrapper { background: transparent !important }
+
+/* el armario: raíles a ambos lados con agujeros cuadrados de montaje */
+#inner_wrapper {
+  position: relative; max-width: none !important; width: 100% !important; margin: 0 !important; padding: 0 56px 40px !important; min-height: 100vh;
+  background:
+    linear-gradient(var(--void), var(--void)) 34px 0 / calc(100% - 68px) 100% no-repeat,
+    repeating-linear-gradient(transparent 0 9px, #08090a 9px 17px, transparent 17px 44px) 10px 0 / 14px 100% no-repeat,
+    repeating-linear-gradient(transparent 0 9px, #08090a 9px 17px, transparent 17px 44px) calc(100% - 10px) 0 / 14px 100% no-repeat,
+    linear-gradient(90deg, #3a3e44, var(--rail) 40%, #24272b) 0 0 / 34px 100% no-repeat,
+    linear-gradient(90deg, #24272b, var(--rail) 60%, #3a3e44) 100% 0 / 34px 100% no-repeat !important;
+}
+
+/* cabecera: reloj y medidores */
+#information-widgets { padding: 22px 14px 14px !important; margin-bottom: 6px }
+.information-widget-datetime span, .information-widget-datetime div { font-family: Saira, sans-serif !important; font-weight: 600 !important; font-size: 26px !important; color: var(--text) !important }
+.information-widget-resource { color: var(--text-2) !important; font-family: Saira, sans-serif !important }
+
+/* grupos: etiqueta de rotuladora pegada al rack */
+.services-group { padding: 6px 8px 12px !important; margin: 0 !important }
+.service-group-name, .services-group h2 {
+  display: inline-block !important; margin: 18px 8px 10px !important; padding: 3px 14px 2px !important;
+  background: var(--tape) !important; color: var(--tape-ink) !important; border-bottom: 0 !important;
+  font: 700 17px/1.3 Saira, sans-serif !important; letter-spacing: .04em !important; text-transform: none !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 4px) 50%, 100% 100%, 0 100%, 4px 50%);
+  box-shadow: none !important; transform: rotate(-.4deg);
+}
+
+/* cada servicio: una placa frontal atornillada */
+.service-card {
+  position: relative; background: linear-gradient(180deg, var(--plate-hi), var(--plate) 18%, var(--plate)) !important;
+  border: 1px solid #33373e !important; border-top-color: #41464e !important; border-radius: 3px !important;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .35) !important; padding: 10px 14px 10px 22px !important; min-height: 64px;
+}
+.service-card::before, .service-card::after {
+  content: ""; position: absolute; left: 7px; width: 7px; height: 7px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #7a8089, #3a3e44 70%); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .4);
+}
+.service-card::before { top: 8px }
+.service-card::after { bottom: 8px }
+.service-card:hover { border-color: #4b515a !important; background: linear-gradient(180deg, #30353c, #23272c 18%, #23272c) !important }
+.service, .service-card > div, li.service > div { background: transparent !important }
+.service-title-text, .service-name { font: 600 19px Saira, sans-serif !important; color: var(--text) !important }
+.service-description { font: 400 13.5px Saira, sans-serif !important; color: var(--text-2) !important; opacity: 1 !important }
+.service-icon img { width: 30px !important; height: 30px !important; filter: saturate(.85) }
+
+/* LED de estado */
+.docker-status div, .site-monitor-status div, .ping-status div {
+  width: 9px !important; height: 9px !important; border-radius: 50% !important;
+  background: var(--led) !important; box-shadow: 0 0 6px var(--led), 0 0 1px #fff inset !important;
+}
+.docker-status div[class*="red"], .docker-status div[class*="orange"], .site-monitor-status div[class*="red"] {
+  background: var(--led-off) !important; box-shadow: 0 0 6px var(--led-off) !important;
+}
+
+#footer, .version { display: none !important }
+@media (max-width: 640px) {
+  #inner_wrapper { padding: 0 26px 30px !important;
+    background:
+      linear-gradient(var(--void), var(--void)) 18px 0 / calc(100% - 36px) 100% no-repeat,
+      linear-gradient(90deg, #3a3e44, var(--rail)) 0 0 / 18px 100% no-repeat,
+      linear-gradient(90deg, var(--rail), #3a3e44) 100% 0 / 18px 100% no-repeat !important }
+}
+/* a pantalla completa: el contenido de Homepage también sin límite de ancho */
+#page_wrapper, #inner_wrapper > div, #layout-groups, #information-widgets { max-width: none !important }

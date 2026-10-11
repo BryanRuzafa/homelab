@@ -1,0 +1,86 @@
+{
+ "id": "asistErrores0001",
+ "name": "Asistente · Aviso de errores",
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "Europe/Madrid"
+ },
+ "active": false,
+ "nodes": [
+  {
+   "parameters": {},
+   "name": "Si falla un flujo",
+   "type": "n8n-nodes-base.errorTrigger",
+   "typeVersion": 1,
+   "position": [
+    0,
+    0
+   ],
+   "id": "acd98226-2d33-4489-a6cb-0724d8d7e88b"
+  },
+  {
+   "parameters": {
+    "jsCode": "const s = $getWorkflowStaticData('global');\nconst e = $json;\nconst wf = (e.workflow && e.workflow.name) || 'flujo';\nconst key = wf + '|' + ((e.execution && e.execution.error && e.execution.error.message) || '').slice(0, 80);\nconst now = Date.now();\ns.sent = s.sent || {};\nif (s.sent[key] && now - s.sent[key] < 6 * 3600 * 1000) return [];\ns.sent[key] = now;\nconst msg = (e.execution && e.execution.error && e.execution.error.message) || 'Error desconocido';\nreturn [{ json: { text: `⚠️ *n8n: falló «${wf}»*\\n${msg.slice(0, 300)}\\n(no repetiré este aviso en 6 h)` } }];"
+   },
+   "name": "Evitar repetidos",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    240,
+    0
+   ],
+   "id": "f41a6769-c12f-4945-8c96-178a3ccfcef3"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.WAHA_URL }}/api/sendText",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.WAHA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $env.OWNER_PHONE + '@c.us', text: $json.text }) }}"
+   },
+   "name": "Avisar por WhatsApp",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    0
+   ],
+   "id": "6ce5c9c4-1597-4b56-bad4-8a5b61fca75b"
+  }
+ ],
+ "connections": {
+  "Si falla un flujo": {
+   "main": [
+    [
+     {
+      "node": "Evitar repetidos",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Evitar repetidos": {
+   "main": [
+    [
+     {
+      "node": "Avisar por WhatsApp",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ }
+}

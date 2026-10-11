@@ -1,0 +1,42 @@
+#!/bin/bash
+# Copia de seguridad diaria de TODO el servidor en Google Drive (restic: cifrada, incremental, con historial).
+# Repositorio: /root/.config/restic/env  ·  Avisa a Uptime Kuma (monitor "Copia de seguridad diaria").
+# Fuera de la copia: sistema operativo e imagenes Docker (se reinstalan limpios) y caches.
+set -euo pipefail
+set -a; . /root/.config/restic/env; set +a
+PUSH=$(cat /root/.config/restic/kuma-push 2>/dev/null || true)
+STAGE=/var/backups/staging
+push() { [ -n "$PUSH" ] && curl -fsS -m 15 -G "$PUSH" --data-urlencode "status=$1" --data-urlencode "msg=$2" >/dev/null || true; }
+trap 'push down "Fallo en la linea $LINENO"' ERR
+
+rm -rf "$STAGE"; install -d -m 700 "$STAGE"
+# Bases de datos SQLite en caliente con la API de backup (copias consistentes aunque esten en uso)
+sqlite3 /opt/stack/kuma/data/kuma.db ".backup '$STAGE/kuma.db'"
+sqlite3 /opt/stack/vaultwarden/data/db.sqlite3 ".backup '$STAGE/vaultwarden.db'"
+sqlite3 /opt/stack/agenda/data/agenda.db ".backup '$STAGE/agenda.db'"
+sqlite3 /opt/stack/asistente/n8n-data/database.sqlite ".backup '$STAGE/n8n.db'"
+# Inventario para reconstruir el servidor
+docker ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}' > "$STAGE/contenedores.txt"
+dpkg --get-selections > "$STAGE/paquetes.txt"
+nft list ruleset > "$STAGE/nft-ruleset.txt"
+tailscale serve status > "$STAGE/tailscale-serve.txt" 2>&1 || true
+crontab -l > "$STAGE/crontab.txt" 2>/dev/null || true
+
+restic backup --tag diario --one-file-system --exclude-caches \
+  --exclude '/opt/stack/kuma/data/kuma.db*' --exclude '/opt/stack/vaultwarden/data/db.sqlite3*' \
+  --exclude '/opt/stack/agenda/data/agenda.db*' --exclude '/opt/stack/asistente/n8n-data/database.sqlite*' \
+  --exclude '/opt/portfolio/**/node_modules' --exclude '/opt/portfolio/**/.next' \
+  --exclude '/opt/stack/asistente/whisper-cache' --exclude '/root/.cache' --exclude '/root/.config/restic/password' \
+  --exclude '**/*.tmp' --exclude '**/*.part' \
+  /etc /opt /root /home /usr/local /var/www /var/lib/tailscale "$STAGE"
+
+# Historial: 7 diarias, 4 semanales, 6 mensuales
+restic forget --tag diario --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune --quiet
+# Verificacion de integridad los domingos (descarga un 5 % al azar)
+[ "$(date +%u)" = 7 ] && restic check --read-data-subset=5% --quiet
+
+rm -rf "$STAGE"
+SNAPS=$(restic snapshots --json | python3 -c 'import json,sys;print(len(json.load(sys.stdin)))')
+SIZE=$(restic stats --mode raw-data --json | python3 -c 'import json,sys;print(round(json.load(sys.stdin)["total_size"]/1048576,1))')
+push up "OK - Google Drive: $SNAPS copias, ${SIZE} MB"
+echo "Copia completada en Google Drive: $SNAPS copias, ${SIZE} MB"

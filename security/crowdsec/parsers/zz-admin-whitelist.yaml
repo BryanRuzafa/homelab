@@ -1,0 +1,11 @@
+name: bryan/admin-whitelist
+description: "IPs/redes de administracion que nunca deben ser baneadas"
+whitelist:
+  reason: "admin access"
+  ip:
+    - "198.51.100.7"
+    - "127.0.0.1"
+    - "::1"
+  cidr:
+    - "100.64.0.0/10"   # Tailscale IPv4
+    - "fd7a:115c:a1e0::/48"   # Tailscale IPv6

@@ -1,0 +1,5 @@
+[Unit]
+Description=Comprobar recursos del servidor
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/check-resources

@@ -1,0 +1,25 @@
+name: vaultwarden
+services:
+  vaultwarden:
+    image: vaultwarden/server:latest
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DOMAIN: "https://servidor.tailnet-ejemplo.ts.net:3005"
+      # Registro cerrado: la cuenta de Bryan ya existe.
+      SIGNUPS_ALLOWED: "false"
+      SIGNUPS_VERIFY: "false"
+      INVITATIONS_ALLOWED: "false"
+      SHOW_PASSWORD_HINT: "false"
+      # Panel /admin desactivado (sin ADMIN_TOKEN): menos superficie de ataque.
+      PASSWORD_ITERATIONS: "600000"
+      LOGIN_RATELIMIT_SECONDS: "60"
+      LOGIN_RATELIMIT_MAX_BURST: "5"
+      IP_HEADER: "X-Forwarded-For"
+      EXTENDED_LOGGING: "true"
+      LOG_LEVEL: "warn"
+      TZ: "Europe/Madrid"
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:3005:80"

@@ -1,0 +1,10 @@
+// Actualizaciones automaticas tambien para los repositorios externos del servidor.
+Unattended-Upgrade::Origins-Pattern {
+        "origin=Docker,label=Docker CE";
+        "origin=Tailscale,label=Tailscale";
+        "origin=packagecloud.io/crowdsec/crowdsec,label=crowdsec";
+};
+// Si una actualizacion necesita reiniciar, hacerlo de madrugada.
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-Time "05:30";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";

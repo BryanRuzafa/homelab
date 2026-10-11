@@ -1,0 +1,27 @@
+name: boveda
+services:
+  boveda:
+    build: .
+    image: local/boveda:latest
+    restart: unless-stopped
+    command: ["python", "-u", "/app/server.py"]
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DATA_DIR: /data
+      PORT: "8080"
+      MAX_BLOB_MB: "200"
+      INBOX_TOKEN: ${INBOX_TOKEN}
+    volumes:
+      - ./app:/app:ro
+      - ./data:/data
+    ports:
+      - "127.0.0.1:3004:8080"
+    networks: [default, asistente]
+
+networks:
+  asistente:
+    external: true
+    name: asistente_asistente

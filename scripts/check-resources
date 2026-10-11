@@ -1,0 +1,21 @@
+#!/bin/bash
+# Comprueba disco, RAM, swap y carga cada 5 min y lo reporta al monitor "Recursos del servidor" de Uptime Kuma.
+# Si algo supera el umbral el monitor se pone en rojo y llega un WhatsApp.
+set -uo pipefail
+PUSH=$(cat /root/.config/resources-push)
+DISK=$(df --output=pcent / | tail -1 | tr -dc 0-9)
+read -r MT MA < <(awk '/MemTotal/{t=$2}/MemAvailable/{a=$2}END{print t,a}' /proc/meminfo)
+RAM=$(( (MT - MA) * 100 / MT ))
+read -r ST SF < <(awk '/SwapTotal/{t=$2}/SwapFree/{f=$2}END{print t,f}' /proc/meminfo)
+SWAP=$(( ST > 0 ? (ST - SF) * 100 / ST : 0 ))
+LOAD=$(cut -d' ' -f2 /proc/loadavg)          # media de 5 minutos
+CPUS=$(nproc)
+problems=()
+[ "$DISK" -ge 85 ] && problems+=("Disco al ${DISK}%")
+[ "$RAM" -ge 90 ] && problems+=("RAM al ${RAM}%")
+[ "$SWAP" -ge 85 ] && problems+=("Swap al ${SWAP}% (memoria casi agotada)")
+awk -v l="$LOAD" -v c="$CPUS" 'BEGIN{exit !(l > c*2)}' && problems+=("Carga ${LOAD} (CPU saturada)")
+MSG="Disco ${DISK}% · RAM ${RAM}% · Swap ${SWAP}% · Carga ${LOAD}"
+if [ ${#problems[@]} -gt 0 ]; then STATUS=down; MSG="$(IFS=', '; echo "${problems[*]}") — $MSG"; else STATUS=up; fi
+curl -fsS -m 15 -G "$PUSH" --data-urlencode "status=$STATUS" --data-urlencode "msg=$MSG" >/dev/null || true
+echo "$STATUS: $MSG"

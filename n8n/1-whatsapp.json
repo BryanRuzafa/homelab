@@ -1,0 +1,744 @@
+{
+ "id": "asistWhatsApp001",
+ "name": "Asistente · WhatsApp → Agenda",
+ "active": false,
+ "nodes": [
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "whatsapp",
+    "options": {}
+   },
+   "name": "Mensaje de WhatsApp",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    200
+   ],
+   "id": "df9dead4-9727-46f7-a6be-ec45ec1afda5",
+   "webhookId": "d931407f-2739-4571-9af2-d4c95ffee8aa"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/whatsapp/auth",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json.body) }}"
+   },
+   "name": "Clasificar mensaje",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    220,
+    200
+   ],
+   "id": "ce97bec6-84ab-4842-b878-21464dc38740"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "6bb1e051-d644-4dd3-865c-014bf075b7dc",
+       "leftValue": "={{ $json.allowed }}",
+       "rightValue": "",
+       "operator": {
+        "type": "boolean",
+        "operation": "true",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es Bryan?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    440,
+    200
+   ],
+   "id": "38ecb47a-839e-47d6-ab08-ff896c265783"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "2083d8f1-680d-4a95-9e7b-8e71c6c12192",
+       "leftValue": "={{ $json.kind }}",
+       "rightValue": "text",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Texto?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    660,
+    0
+   ],
+   "id": "eca41419-371a-42ba-9a80-15955a4f4f35"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "c439faef-ea76-4349-8b23-f7d1bb20191b",
+       "leftValue": "={{ $json.kind }}",
+       "rightValue": "audio",
+       "operator": {
+        "type": "string",
+        "operation": "equals"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Nota de voz?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    660,
+    240
+   ],
+   "id": "cf73967d-eb5f-409c-8b54-1e6628589de2"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "95fe2051-98c6-4f70-856b-c35280bef6d8",
+       "leftValue": "={{ $json.kind }}",
+       "rightValue": "^(image|document)$",
+       "operator": {
+        "type": "string",
+        "operation": "regex"
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Foto o documento?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    660,
+    480
+   ],
+   "id": "cb5c40e6-a1a6-433d-902d-a5605097f8de"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/command",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ text: $json.text, source: 'whatsapp' }) }}"
+   },
+   "name": "Interpretar texto",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    900,
+    -80
+   ],
+   "id": "b7ddbef2-af16-4a63-9401-a52e2af1f94e"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "={{ $json.mediaUrl }}",
+    "options": {
+     "response": {
+      "response": {
+       "responseFormat": "file",
+       "outputPropertyName": "data"
+      }
+     }
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.WAHA_API_KEY }}"
+      }
+     ]
+    }
+   },
+   "name": "Descargar audio",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    900,
+    160
+   ],
+   "id": "15f90948-2c4a-413a-8228-47ad66210b25"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.WHISPER_URL }}/asr",
+    "options": {
+     "timeout": 300000
+    },
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "task",
+       "value": "transcribe"
+      },
+      {
+       "name": "language",
+       "value": "es"
+      },
+      {
+       "name": "output",
+       "value": "json"
+      },
+      {
+       "name": "encode",
+       "value": "true"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "multipart-form-data",
+    "bodyParameters": {
+     "parameters": [
+      {
+       "parameterType": "formBinaryData",
+       "name": "audio_file",
+       "inputDataFieldName": "data"
+      }
+     ]
+    }
+   },
+   "name": "Transcribir (whisper)",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1120,
+    160
+   ],
+   "id": "cc37f2e8-934b-4214-87cf-687b5b830f65"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/command",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ text: ($json.text || '').trim(), source: 'whatsapp', voice: true }) }}"
+   },
+   "name": "Interpretar voz",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1340,
+    160
+   ],
+   "id": "46e012f4-0087-401b-8fc8-8f78c6d6eca3"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.WAHA_URL }}/api/sendText",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.WAHA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $('Clasificar mensaje').item.json.chatId, text: $json.reply }) }}"
+   },
+   "name": "Responder",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1600,
+    40
+   ],
+   "id": "fe390646-8d2b-47ab-bd40-c4daf5e919e7"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "a7ac2613-bc19-4727-b69a-38ce12e323f3",
+       "leftValue": "={{ $json.calendar }}",
+       "rightValue": "",
+       "operator": {
+        "type": "object",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Es un evento?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    1600,
+    240
+   ],
+   "id": "70a6e38f-55f7-4808-9019-1dc59ba0b70b"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "=http://localhost:5678/webhook/sync-calendar",
+    "options": {},
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={}"
+   },
+   "name": "Enviar a Google Calendar",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1820,
+    240
+   ],
+   "id": "03773f86-dcd1-4683-892b-ae88d1ee2b27"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "={{ $json.mediaUrl }}",
+    "options": {
+     "response": {
+      "response": {
+       "responseFormat": "file",
+       "outputPropertyName": "data"
+      }
+     }
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.WAHA_API_KEY }}"
+      }
+     ]
+    }
+   },
+   "name": "Descargar archivo",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    900,
+    440
+   ],
+   "id": "89627c5f-f1a4-4c16-8917-922d406bd592"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.BOVEDA_URL }}/api/inbox/upload",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Inbox-Token",
+       "value": "={{ $env.BOVEDA_INBOX_TOKEN }}"
+      },
+      {
+       "name": "X-Filename",
+       "value": "={{ encodeURIComponent($('Clasificar mensaje').item.json.filename) }}"
+      },
+      {
+       "name": "X-Mime",
+       "value": "={{ $('Clasificar mensaje').item.json.mimetype }}"
+      },
+      {
+       "name": "X-Caption",
+       "value": "={{ encodeURIComponent($('Clasificar mensaje').item.json.caption || '') }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "binaryData",
+    "inputDataFieldName": "data"
+   },
+   "name": "Guardar cifrado en la Bóveda",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1120,
+    440
+   ],
+   "id": "fd0c1674-2adf-44da-9baa-ece4bebc97ba"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.WAHA_URL }}/api/sendText",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.WAHA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $('Clasificar mensaje').item.json.chatId, text: $json.reply || '⚠️ No he podido guardar el archivo en la Bóveda.' }) }}"
+   },
+   "name": "Confirmar a Bryan",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1340,
+    440
+   ],
+   "id": "2f40cc84-3924-4409-a9b1-1d7f7440e0f3"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/whatsapp/out",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ text: $('Guardar cifrado en la Bóveda').item.json.reply || 'No se pudo guardar el archivo' }) }}"
+   },
+   "name": "Guardar en el historial",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1560,
+    440
+   ],
+   "id": "f243dda3-6b47-4c8c-878e-cd88960f3ea8"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.WAHA_URL }}/api/sendText",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.WAHA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $('Clasificar mensaje').item.json.chatId, text: '📎 Puedo con texto, notas de voz, fotos y documentos. Escribe *?* para ver los comandos.' }) }}"
+   },
+   "name": "Responder: no soportado",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    900,
+    640
+   ],
+   "id": "1c63c8b9-325b-497e-8365-d1723c08326c"
+  }
+ ],
+ "connections": {
+  "Mensaje de WhatsApp": {
+   "main": [
+    [
+     {
+      "node": "Clasificar mensaje",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Clasificar mensaje": {
+   "main": [
+    [
+     {
+      "node": "¿Es Bryan?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es Bryan?": {
+   "main": [
+    [
+     {
+      "node": "¿Texto?",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    []
+   ]
+  },
+  "¿Texto?": {
+   "main": [
+    [
+     {
+      "node": "Interpretar texto",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "¿Nota de voz?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Nota de voz?": {
+   "main": [
+    [
+     {
+      "node": "Descargar audio",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "¿Foto o documento?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Foto o documento?": {
+   "main": [
+    [
+     {
+      "node": "Descargar archivo",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Responder: no soportado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Interpretar texto": {
+   "main": [
+    [
+     {
+      "node": "Responder",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "¿Es un evento?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Descargar audio": {
+   "main": [
+    [
+     {
+      "node": "Transcribir (whisper)",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Transcribir (whisper)": {
+   "main": [
+    [
+     {
+      "node": "Interpretar voz",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Interpretar voz": {
+   "main": [
+    [
+     {
+      "node": "Responder",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "¿Es un evento?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Es un evento?": {
+   "main": [
+    [
+     {
+      "node": "Enviar a Google Calendar",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    []
+   ]
+  },
+  "Descargar archivo": {
+   "main": [
+    [
+     {
+      "node": "Guardar cifrado en la Bóveda",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Guardar cifrado en la Bóveda": {
+   "main": [
+    [
+     {
+      "node": "Confirmar a Bryan",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Confirmar a Bryan": {
+   "main": [
+    [
+     {
+      "node": "Guardar en el historial",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ },
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "Europe/Madrid",
+  "saveDataSuccessExecution": "all",
+  "saveDataErrorExecution": "all",
+  "errorWorkflow": "asistErrores0001"
+ }
+}

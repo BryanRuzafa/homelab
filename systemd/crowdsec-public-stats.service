@@ -1,0 +1,5 @@
+[Unit]
+Description=Cifras públicas de CrowdSec para el portfolio
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/crowdsec-public-stats

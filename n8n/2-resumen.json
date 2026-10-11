@@ -1,0 +1,192 @@
+{
+ "id": "asistResumen0800",
+ "name": "Asistente · Resumen diario 8:00",
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "Europe/Madrid",
+  "saveDataSuccessExecution": "all",
+  "saveDataErrorExecution": "all",
+  "errorWorkflow": "asistErrores0001"
+ },
+ "active": false,
+ "nodes": [
+  {
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "cronExpression",
+       "expression": "0 8 * * *"
+      }
+     ]
+    }
+   },
+   "name": "Cada día a las 8:00",
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "id": "4351f326-c624-45d5-be5a-6a772b706265"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "={{ $env.AGENDA_URL }}/api/summary?what=hoy&morning=1",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "options": {}
+   },
+   "name": "Preparar mensaje",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    240,
+    0
+   ],
+   "id": "dd546560-c76d-46a1-b762-94ca55b91869"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "7b52a5ab-950a-482e-a788-c891f0363e40",
+       "leftValue": "={{ $json.text }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Hay algo que enviar?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    480,
+    0
+   ],
+   "id": "fa4e8cfa-7915-463d-b59d-66288d60b94d"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.WAHA_URL }}/api/sendText",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.WAHA_API_KEY }}"
+      }
+     ]
+    },
+    "options": {},
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $env.OWNER_PHONE + '@c.us', text: $('Preparar mensaje').item.json.text }) }}"
+   },
+   "name": "Enviar a Bryan",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    720,
+    -80
+   ],
+   "id": "bb703f86-34df-48d3-bb44-f2fd5a0c80d5"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/whatsapp/out",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "options": {},
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ text: $('Preparar mensaje').item.json.text }) }}"
+   },
+   "name": "Guardar en el historial",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    960,
+    -80
+   ],
+   "id": "1ea7c379-c226-4033-8de3-8edf0e7d0f46"
+  }
+ ],
+ "connections": {
+  "Cada día a las 8:00": {
+   "main": [
+    [
+     {
+      "node": "Preparar mensaje",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Preparar mensaje": {
+   "main": [
+    [
+     {
+      "node": "¿Hay algo que enviar?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Hay algo que enviar?": {
+   "main": [
+    [
+     {
+      "node": "Enviar a Bryan",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    []
+   ]
+  },
+  "Enviar a Bryan": {
+   "main": [
+    [
+     {
+      "node": "Guardar en el historial",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ }
+}

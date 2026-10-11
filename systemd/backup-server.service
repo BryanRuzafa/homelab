@@ -1,0 +1,11 @@
+[Unit]
+Description=Copia de seguridad diaria en Google Drive (restic)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+TimeoutStartSec=2h
+Type=oneshot
+ExecStart=/usr/local/sbin/backup-server
+Nice=10
+IOSchedulingClass=idle

@@ -1,0 +1,6 @@
+[Unit]
+Description=Actualizar IPs de Cloudflare
+After=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/update-cloudflare-ips

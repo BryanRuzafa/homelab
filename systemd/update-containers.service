@@ -1,0 +1,9 @@
+[Unit]
+Description=Actualizacion semanal de contenedores
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/update-containers
+TimeoutStartSec=2h

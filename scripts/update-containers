@@ -1,0 +1,44 @@
+#!/bin/bash
+# Actualizacion semanal de los contenedores de /opt/stack con copia de seguridad previa.
+# Resultado por WhatsApp (notify). El portfolio (/opt/portfolio) se construye a mano y no se toca.
+set -uo pipefail
+LOG=/var/log/update-containers.log
+exec > >(tee -a "$LOG") 2>&1
+echo "=== $(date '+%F %T') ==="
+
+if ! systemctl start backup-server.service; then
+  notify "⚠️ *Actualizaciones semanales canceladas*: la copia de seguridad previa ha fallado."
+  exit 1
+fi
+
+updated=(); failed=()
+for dir in /opt/stack/*/; do
+  [ -f "$dir/compose.yaml" ] || continue
+  name=$(basename "$dir")
+  before=$(docker compose --project-directory "$dir" images -q 2>/dev/null | sort | tr '\n' ' ')
+  if ! docker compose --project-directory "$dir" pull -q --ignore-buildable; then failed+=("$name (descarga)"); continue; fi
+  # Imagenes propias (Agenda, Boveda): reconstruir sobre la base de Python mas reciente
+  if grep -q '^\s*build:' "$dir/compose.yaml" && ! docker compose --project-directory "$dir" build -q --pull; then failed+=("$name (construccion)"); continue; fi
+  if ! docker compose --project-directory "$dir" up -d --remove-orphans; then failed+=("$name (arranque)"); continue; fi
+  after=$(docker compose --project-directory "$dir" images -q 2>/dev/null | sort | tr '\n' ' ')
+  [ "$before" != "$after" ] && updated+=("$name")
+done
+
+sleep 90  # dar tiempo a que arranquen
+for c in $(docker ps -a --format '{{.Names}}'); do
+  st=$(docker inspect -f '{{.State.Status}} {{if .State.Health}}{{.State.Health.Status}}{{end}}' "$c" | xargs)
+  case "$st" in running|"running healthy"|"running starting") ;; *) failed+=("$c: $st") ;; esac
+done
+docker image prune -f >/dev/null
+
+if [ ${#failed[@]} -gt 0 ]; then
+  notify "⚠️ *Actualizaciones semanales*: hay problemas
+$(printf '• %s\n' "${failed[@]}")
+Actualizados: ${updated[*]:-ninguno}
+Hay copia de seguridad de justo antes."
+elif [ ${#updated[@]} -gt 0 ]; then
+  notify "🔄 *Actualizaciones semanales* completadas
+$(printf '• %s\n' "${updated[@]}")
+Todo funcionando ✅"
+fi
+echo "actualizados: ${updated[*]:-ninguno} | problemas: ${failed[*]:-ninguno}"

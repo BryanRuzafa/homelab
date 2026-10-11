@@ -1,0 +1,18 @@
+name: default_ip_remediation
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Ip"
+decisions:
+  - type: ban
+    duration: 4h
+# Baneo progresivo: 4h, 8h, 12h... maximo 168h (7 dias) para reincidentes
+duration_expr: "Sprintf('%dh', (GetDecisionsCount(Alert.GetValue()) + 1) * 4 > 168 ? 168 : (GetDecisionsCount(Alert.GetValue()) + 1) * 4)"
+on_success: break
+---
+name: default_range_remediation
+filters:
+  - Alert.Remediation == true && Alert.GetScope() == "Range"
+decisions:
+  - type: ban
+    duration: 4h
+duration_expr: "Sprintf('%dh', (GetDecisionsCount(Alert.GetValue()) + 1) * 4 > 168 ? 168 : (GetDecisionsCount(Alert.GetValue()) + 1) * 4)"
+on_success: break

@@ -1,0 +1,628 @@
+{
+ "id": "asistGoogleCal01",
+ "name": "Asistente · Sincronizar Google Calendar",
+ "settings": {
+  "executionOrder": "v1",
+  "timezone": "Europe/Madrid",
+  "saveDataSuccessExecution": "none",
+  "saveDataErrorExecution": "all",
+  "errorWorkflow": "asistErrores0001"
+ },
+ "active": false,
+ "nodes": [
+  {
+   "parameters": {
+    "rule": {
+     "interval": [
+      {
+       "field": "minutes",
+       "minutesInterval": 2
+      }
+     ]
+    }
+   },
+   "name": "Cada 2 minutos",
+   "type": "n8n-nodes-base.scheduleTrigger",
+   "typeVersion": 1.2,
+   "position": [
+    0,
+    0
+   ],
+   "id": "a74f95b5-bdb8-4cb0-8d93-f458b93eb6ce"
+  },
+  {
+   "parameters": {
+    "httpMethod": "POST",
+    "path": "sync-calendar",
+    "options": {}
+   },
+   "name": "Al instante (desde WhatsApp)",
+   "type": "n8n-nodes-base.webhook",
+   "typeVersion": 2,
+   "position": [
+    0,
+    200
+   ],
+   "id": "bb54c99d-2f9b-400e-90bf-7ec85e06c150",
+   "webhookId": "22367509-f7e7-4e25-92bd-b8b524fc41ec"
+  },
+  {
+   "parameters": {},
+   "name": "Sincronizar",
+   "type": "n8n-nodes-base.noOp",
+   "typeVersion": 1,
+   "position": [
+    240,
+    100
+   ],
+   "id": "70815f8e-5330-42da-8e32-5e070cd5e10a"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "={{ $env.AGENDA_URL }}/api/sync/pending",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    }
+   },
+   "name": "Eventos nuevos o cambiados",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    -200
+   ],
+   "id": "dbcac3b8-32ac-48c3-a50b-458a236f4b02"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "a3c1076c-74a9-4a4a-83f3-3201fb804a25",
+       "leftValue": "={{ $json.id }}",
+       "rightValue": "",
+       "operator": {
+        "type": "number",
+        "operation": "exists",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Hay eventos?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    700,
+    -200
+   ],
+   "id": "eeb7247a-8337-473a-a164-1298e5d23ba2"
+  },
+  {
+   "parameters": {
+    "jsCode": "const e = $json;\nconst pad = n => String(n).padStart(2, '0');\nconst nextDay = d => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + 1); return x.toISOString().slice(0, 10); };\nconst body = { summary: e.title };\nif (e.notes) body.description = e.notes;\nif (e.time) {\n  let end = e.end_time && e.end_time > e.time ? e.end_time : pad(Math.min(+e.time.slice(0, 2) + 1, 23)) + e.time.slice(2);\n  if (end <= e.time) end = '23:59';\n  body.start = { dateTime: `${e.date}T${e.time}:00`, timeZone: 'Europe/Madrid' };\n  body.end = { dateTime: `${e.date}T${end}:00`, timeZone: 'Europe/Madrid' };\n} else {\n  body.start = { date: e.date };\n  body.end = { date: nextDay(e.date) };\n}\nreturn { json: { agenda_id: e.id, gcal_id: e.gcal_id || '', body } };",
+    "mode": "runOnceForEachItem"
+   },
+   "name": "Preparar evento",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    920,
+    -200
+   ],
+   "id": "51196af9-13bb-4c29-a8b4-1cf88140cba2"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "4f223d95-ee4b-4b7f-b1ee-06940be3278b",
+       "leftValue": "={{ $json.gcal_id }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Ya está en Google?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    1140,
+    -200
+   ],
+   "id": "b1928ca5-5eeb-4a82-8705-47970bfb4a60"
+  },
+  {
+   "parameters": {
+    "method": "PATCH",
+    "url": "=https://www.googleapis.com/calendar/v3/calendars/primary/events/{{ $json.gcal_id }}",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json.body) }}",
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "googleCalendarOAuth2Api"
+   },
+   "name": "Actualizar en Google",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1360,
+    -280
+   ],
+   "id": "a57766fd-acea-4f0c-af50-370977626ae9",
+   "credentials": {
+    "googleCalendarOAuth2Api": {
+     "id": "CREDENCIAL_GOOGLE_CALENDAR",
+     "name": "Google Calendar account"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+    "options": {},
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json.body) }}",
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "googleCalendarOAuth2Api"
+   },
+   "name": "Crear en Google",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1360,
+    -120
+   ],
+   "id": "2fa33272-b26b-4e02-b662-fc284c499551",
+   "credentials": {
+    "googleCalendarOAuth2Api": {
+     "id": "CREDENCIAL_GOOGLE_CALENDAR",
+     "name": "Google Calendar account"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/sync/mark",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ id: $('Preparar evento').item.json.agenda_id, gcal_id: $json.id || null }) }}"
+   },
+   "name": "Marcar sincronizado",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1580,
+    -200
+   ],
+   "id": "798aadf5-a68c-443b-9a24-556fbcede11d"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "={{ $env.AGENDA_URL }}/api/sync/deleted",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    }
+   },
+   "name": "Eventos borrados",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    0
+   ],
+   "id": "2f8d299f-e704-4c08-8ca5-24eea651f85f"
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "options": {
+      "caseSensitive": true,
+      "leftValue": "",
+      "typeValidation": "loose"
+     },
+     "conditions": [
+      {
+       "id": "bff201d8-f6da-4de5-81ac-340e1ee4ea0e",
+       "leftValue": "={{ $json.gcal_id }}",
+       "rightValue": "",
+       "operator": {
+        "type": "string",
+        "operation": "notEmpty",
+        "singleValue": true
+       }
+      }
+     ],
+     "combinator": "and"
+    },
+    "options": {}
+   },
+   "name": "¿Hay borrados?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 2,
+   "position": [
+    700,
+    0
+   ],
+   "id": "0e20ed0a-9432-4b05-8079-3fb02f8dd548"
+  },
+  {
+   "parameters": {
+    "method": "DELETE",
+    "url": "=https://www.googleapis.com/calendar/v3/calendars/primary/events/{{ $json.gcal_id }}",
+    "options": {
+     "response": {
+      "response": {
+       "neverError": true
+      }
+     }
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "googleCalendarOAuth2Api"
+   },
+   "name": "Borrar en Google",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    920,
+    0
+   ],
+   "id": "eb09f85c-ccb9-45e1-8a17-4577909691a7",
+   "credentials": {
+    "googleCalendarOAuth2Api": {
+     "id": "CREDENCIAL_GOOGLE_CALENDAR",
+     "name": "Google Calendar account"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/sync/deleted/ack",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify({ gcal_id: $('Eventos borrados').item.json.gcal_id }) }}"
+   },
+   "name": "Confirmar borrado",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    1140,
+    0
+   ],
+   "id": "f7b233f9-e0b3-4504-b74d-2c56c70da462"
+  },
+  {
+   "parameters": {
+    "method": "GET",
+    "url": "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+    "options": {},
+    "sendQuery": true,
+    "queryParameters": {
+     "parameters": [
+      {
+       "name": "timeMin",
+       "value": "={{ $now.minus({days: 30}).startOf('day').toISO() }}"
+      },
+      {
+       "name": "timeMax",
+       "value": "={{ $now.plus({days: 180}).endOf('day').toISO() }}"
+      },
+      {
+       "name": "singleEvents",
+       "value": "true"
+      },
+      {
+       "name": "orderBy",
+       "value": "startTime"
+      },
+      {
+       "name": "maxResults",
+       "value": "2500"
+      },
+      {
+       "name": "timeZone",
+       "value": "Europe/Madrid"
+      }
+     ]
+    },
+    "authentication": "predefinedCredentialType",
+    "nodeCredentialType": "googleCalendarOAuth2Api"
+   },
+   "name": "Leer Google Calendar",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    480,
+    220
+   ],
+   "id": "23b0a89f-c460-4edf-8cd3-fd189aa9a4fd",
+   "credentials": {
+    "googleCalendarOAuth2Api": {
+     "id": "CREDENCIAL_GOOGLE_CALENDAR",
+     "name": "Google Calendar account"
+    }
+   }
+  },
+  {
+   "parameters": {
+    "jsCode": "const r = $input.first().json;\nif (!Array.isArray(r.items)) throw new Error('Respuesta inesperada de Google Calendar: ' + JSON.stringify(r).slice(0, 300));\nconst from = $now.minus({ days: 30 }).toFormat('yyyy-MM-dd');\nconst to = $now.plus({ days: 180 }).toFormat('yyyy-MM-dd');\nconst events = r.items.filter(e => e.status !== 'cancelled' && e.start).map(e => {\n  const s = e.start.dateTime || e.start.date;\n  const en = (e.end && (e.end.dateTime || e.end.date)) || '';\n  const timed = !!e.start.dateTime;\n  return { gcal_id: e.id, title: e.summary || '(sin título)', date: s.slice(0, 10),\n           time: timed ? s.slice(11, 16) : null, end_time: timed && en ? en.slice(11, 16) : null };\n});\nreturn [{ json: { from, to, events } }];"
+   },
+   "name": "Convertir eventos",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    700,
+    220
+   ],
+   "id": "11151aee-6814-43cd-bea0-e8b00391618a"
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "={{ $env.AGENDA_URL }}/api/sync/google",
+    "options": {},
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "X-Api-Key",
+       "value": "={{ $env.AGENDA_API_KEY }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "specifyBody": "json",
+    "jsonBody": "={{ JSON.stringify($json) }}"
+   },
+   "name": "Guardar en la Agenda",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    920,
+    220
+   ],
+   "id": "38efe2e3-e14e-4f00-ab37-b6024f8ed609"
+  }
+ ],
+ "connections": {
+  "Cada 2 minutos": {
+   "main": [
+    [
+     {
+      "node": "Sincronizar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Al instante (desde WhatsApp)": {
+   "main": [
+    [
+     {
+      "node": "Sincronizar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Sincronizar": {
+   "main": [
+    [
+     {
+      "node": "Eventos nuevos o cambiados",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Eventos borrados",
+      "type": "main",
+      "index": 0
+     },
+     {
+      "node": "Leer Google Calendar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Eventos nuevos o cambiados": {
+   "main": [
+    [
+     {
+      "node": "¿Hay eventos?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Hay eventos?": {
+   "main": [
+    [
+     {
+      "node": "Preparar evento",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Preparar evento": {
+   "main": [
+    [
+     {
+      "node": "¿Ya está en Google?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Ya está en Google?": {
+   "main": [
+    [
+     {
+      "node": "Actualizar en Google",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "Crear en Google",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Actualizar en Google": {
+   "main": [
+    [
+     {
+      "node": "Marcar sincronizado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Crear en Google": {
+   "main": [
+    [
+     {
+      "node": "Marcar sincronizado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Eventos borrados": {
+   "main": [
+    [
+     {
+      "node": "¿Hay borrados?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "¿Hay borrados?": {
+   "main": [
+    [
+     {
+      "node": "Borrar en Google",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Borrar en Google": {
+   "main": [
+    [
+     {
+      "node": "Confirmar borrado",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Leer Google Calendar": {
+   "main": [
+    [
+     {
+      "node": "Convertir eventos",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "Convertir eventos": {
+   "main": [
+    [
+     {
+      "node": "Guardar en la Agenda",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  }
+ }
+}

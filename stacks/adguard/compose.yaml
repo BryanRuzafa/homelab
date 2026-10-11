@@ -1,0 +1,12 @@
+name: adguard
+services:
+  adguardhome:
+    image: adguard/adguardhome:latest
+    restart: unless-stopped
+    # Red host: el DNS (53) pasa por el firewall host_fw (solo Tailscale + IP de casa).
+    # Con "ports:" Docker se saltaria el firewall y seria un DNS abierto a Internet.
+    network_mode: host
+    command: ["--no-check-update", "-c", "/opt/adguardhome/conf/AdGuardHome.yaml", "-w", "/opt/adguardhome/work", "--web-addr", "127.0.0.1:3002"]
+    volumes:
+      - ./work:/opt/adguardhome/work
+      - ./conf:/opt/adguardhome/conf

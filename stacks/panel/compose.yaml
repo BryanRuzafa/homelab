@@ -1,0 +1,28 @@
+name: panel
+services:
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [panel]
+    read_only: true
+    tmpfs: [/run, /tmp]
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    restart: unless-stopped
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: servidor.tailnet-ejemplo.ts.net,127.0.0.1:3010
+    volumes:
+      - ./homepage:/app/config
+    ports:
+      - "127.0.0.1:3010:3000"
+    networks: [panel]
+    depends_on: [docker-proxy]
+
+networks:
+  panel:

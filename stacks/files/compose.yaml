@@ -1,0 +1,12 @@
+name: files
+services:
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    restart: unless-stopped
+    user: "1000:1000"
+    volumes:
+      - ./data:/srv
+      - ./database:/database
+      - ./config:/config
+    ports:
+      - "127.0.0.1:3003:80"

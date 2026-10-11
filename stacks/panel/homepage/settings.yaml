@@ -1,0 +1,18 @@
+title: Panel de servidor
+language: es
+theme: dark
+color: slate
+headerStyle: clean
+hideVersion: true
+statusStyle: dot
+cardBlur: ""
+layout:
+  Servicios:
+    style: row
+    columns: 5
+  Asistente:
+    style: row
+    columns: 5
+  Web pública:
+    style: row
+    columns: 5

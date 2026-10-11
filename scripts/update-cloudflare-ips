@@ -1,0 +1,17 @@
+#!/bin/bash
+# Refresca las IPs de Cloudflare para el firewall (solo CF puede llegar a 80/443) y para la IP real en Nginx.
+set -euo pipefail
+v4=$(curl -fsS https://www.cloudflare.com/ips-v4); v6=$(curl -fsS https://www.cloudflare.com/ips-v6)
+[ "$(echo "$v4" | wc -l)" -ge 10 ] && [ "$(echo "$v6" | wc -l)" -ge 5 ] || { echo "lista sospechosa, no se aplica"; exit 1; }
+tmp=$(mktemp)
+{ echo "# Generado por update-cloudflare-ips $(date +%F)"
+  echo "set cf_v4 { type ipv4_addr; flags interval; elements = { $(echo $v4 | tr ' ' ',') } }"
+  echo "set cf_v6 { type ipv6_addr; flags interval; elements = { $(echo $v6 | tr ' ' ',') } }"; } > "$tmp"
+install -m 644 "$tmp" /etc/nftables.d/cloudflare-sets.nft
+{ echo "# IP real del visitante cuando llega por Cloudflare. Generado por update-cloudflare-ips $(date +%F)"
+  for ip in $v4 $v6; do echo "set_real_ip_from $ip;"; done
+  echo "real_ip_header CF-Connecting-IP;"; } > "$tmp"
+install -m 644 "$tmp" /etc/nginx/conf.d/cloudflare-realip.conf; rm -f "$tmp"
+nft -c -f /etc/nftables.conf && nft -f /etc/nftables.conf
+nginx -t -q && systemctl reload nginx
+echo "IPs de Cloudflare actualizadas"

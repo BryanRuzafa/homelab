@@ -1,0 +1,13 @@
+name: kuma
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+    # Red host para poder monitorizar servicios en 127.0.0.1; la UI solo escucha en localhost
+    # (se publica en la tailnet con "tailscale serve --https=3001").
+    network_mode: host
+    environment:
+      UPTIME_KUMA_HOST: 127.0.0.1
+      UPTIME_KUMA_PORT: "3001"
+    volumes:
+      - ./data:/app/data

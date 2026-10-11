@@ -1,0 +1,11 @@
+#!/bin/sh
+# Publica las cifras de CrowdSec (sin IPs ni detalles) para el contador en vivo del portfolio.
+# Lo sirve Nginx en https://bryanrg.dev/stats/crowdsec.json
+set -eu
+DB="file:/var/lib/crowdsec/data/crowdsec.db?mode=ro"
+blocked=$(sqlite3 "$DB" "SELECT count(*) FROM decisions WHERE until > datetime('now');")
+local_now=$(sqlite3 "$DB" "SELECT count(*) FROM decisions WHERE until > datetime('now') AND origin <> 'CAPI' AND origin <> 'lists';")
+attacks7=$(sqlite3 "$DB" "SELECT count(*) FROM alerts WHERE created_at > datetime('now','-7 days') AND scenario NOT LIKE 'update : %';")
+tmp=$(mktemp /var/www/stats/.crowdsec.XXXXXX)
+printf '{"blocked":%s,"detected_here":%s,"attacks_7d":%s,"updated":"%s"}\n' "$blocked" "$local_now" "$attacks7" "$(date -u +%FT%TZ)" > "$tmp"
+chmod 644 "$tmp"; mv -f "$tmp" /var/www/stats/crowdsec.json

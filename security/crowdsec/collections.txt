@@ -1,0 +1,6 @@
+crowdsecurity/base-http-scenarios
+crowdsecurity/http-cve
+crowdsecurity/linux
+crowdsecurity/nginx
+crowdsecurity/sshd
+crowdsecurity/whitelist-good-actors

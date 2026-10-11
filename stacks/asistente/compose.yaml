@@ -1,0 +1,101 @@
+name: asistente
+# Asistente por WhatsApp: WAHA (puente WhatsApp) -> n8n (automatizaciones) -> Agenda (web + datos).
+# Todo escucha solo en 127.0.0.1 y se publica en la tailnet con "tailscale serve".
+services:
+  waha:
+    image: devlikeapro/waha:noweb-arm
+    restart: unless-stopped
+    environment:
+      WHATSAPP_DEFAULT_ENGINE: NOWEB
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      WAHA_DASHBOARD_ENABLED: "true"
+      WAHA_DASHBOARD_USERNAME: bryan
+      WAHA_DASHBOARD_PASSWORD: ${WAHA_DASHBOARD_PASSWORD}
+      WHATSAPP_SWAGGER_ENABLED: "false"
+      WHATSAPP_RESTART_ALL_SESSIONS: "true"
+      WHATSAPP_HOOK_URL: http://n8n:5678/webhook/whatsapp
+      WHATSAPP_HOOK_EVENTS: message
+      WAHA_PRINT_QR: "false"
+      WAHA_BASE_URL: http://waha:3000
+      TZ: Europe/Madrid
+    volumes:
+      - ./waha-sessions:/app/.sessions
+    ports:
+      - "127.0.0.1:3007:3000"
+    networks: [asistente]
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      N8N_HOST: servidor.tailnet-ejemplo.ts.net
+      N8N_PROTOCOL: https
+      N8N_PORT: "5678"
+      WEBHOOK_URL: https://servidor.tailnet-ejemplo.ts.net:3008/
+      N8N_EDITOR_BASE_URL: https://servidor.tailnet-ejemplo.ts.net:3008/
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      GENERIC_TIMEZONE: Europe/Madrid
+      TZ: Europe/Madrid
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      N8N_PROXY_HOPS: "1"
+      AGENDA_URL: http://agenda:8080
+      AGENDA_API_KEY: ${AGENDA_API_KEY}
+      WAHA_URL: http://waha:3000
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      OWNER_PHONE: ${OWNER_PHONE}
+      WHISPER_URL: http://whisper:9000
+      BOVEDA_URL: http://boveda:8080
+      BOVEDA_INBOX_TOKEN: ${BOVEDA_INBOX_TOKEN}
+    volumes:
+      - ./n8n-data:/home/node/.n8n
+    ports:
+      - "127.0.0.1:3008:5678"
+    networks: [asistente]
+
+  agenda:
+    build: /opt/stack/agenda
+    image: local/agenda:latest
+    restart: unless-stopped
+    command: ["python", "-u", "/app/server.py"]
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      DATA_DIR: /data
+      API_KEY: ${AGENDA_API_KEY}
+      OWNER_PHONE: ${OWNER_PHONE}
+      WAHA_URL: http://waha:3000
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      WEATHER_CITY: ${WEATHER_CITY}
+      TZ: Europe/Madrid
+    volumes:
+      - /opt/stack/agenda/app:/app:ro
+      - /opt/stack/agenda/data:/data
+    ports:
+      - "127.0.0.1:3009:8080"
+    networks: [asistente]
+
+  # Transcripción de notas de voz en el propio servidor (el audio no sale de aquí)
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    restart: unless-stopped
+    environment:
+      ASR_ENGINE: faster_whisper
+      ASR_MODEL: small
+      ASR_DEVICE: cpu
+      ASR_QUANTIZATION: int8
+      ASR_MODEL_PATH: /data/whisper
+      MODEL_IDLE_TIMEOUT: "300"
+    volumes:
+      - ./whisper-cache:/data/whisper
+    mem_limit: 1500m
+    networks: [asistente]
+
+networks:
+  asistente:
